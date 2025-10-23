@@ -34,8 +34,22 @@ turnserver:
     min-port=49160
     max-port=49200
     realm=turn.server.ghifari.dev
+    {{- if .Values.turnserver.credentials.ltCredMech }}
+    lt-cred-mech
+    {{- end }}
+    {{- range .Values.turnserver.credentials.users }}
+    user={{ .username }}:{{ .password }}
+    {{- end }}
+    {{- if .Values.turnserver.credentials.staticAuthSecret }}
+    static-auth-secret={{ .Values.turnserver.credentials.staticAuthSecret }}
+    {{- end }}
   extraArgs:
     - --log-file=stdout
+  credentials:
+    ltCredMech: true
+    users:
+      - username: turnuser
+        password: changeme
   persistence:
     enabled: true
     size: 1Gi

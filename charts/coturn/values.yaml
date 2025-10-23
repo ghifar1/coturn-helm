@@ -66,6 +66,15 @@ turnserver:
   extraEnv: []
   # Use `extraEnvFrom` to import ConfigMaps or Secrets.
   extraEnvFrom: []
+  # Optional long-term credential helpers injected into the default config template.
+  credentials:
+    # When true, emits `lt-cred-mech` so Coturn accepts long-term credentials.
+    ltCredMech: false
+    # Provide explicit `user=username:password` entries. Values render verbatim; prefer
+    # sourcing from Secrets via `turnserver.extraEnv` in production environments.
+    users: []
+    # Non-empty value injects `static-auth-secret=` for REST-based HMAC credentials.
+    staticAuthSecret: ""
   # Provide your own ConfigMap name to reuse an existing `turnserver.conf`.
   existingConfigMap: ""
   # Inline Coturn configuration. Template expressions are supported (e.g. `{{ .Values.turnserver.realm }}`) if desired.
@@ -79,6 +88,15 @@ turnserver:
     min-port=49160
     max-port=49200
     realm=example.com
+    {{- if .Values.turnserver.credentials.ltCredMech }}
+    lt-cred-mech
+    {{- end }}
+    {{- range .Values.turnserver.credentials.users }}
+    user={{ .username }}:{{ .password }}
+    {{- end }}
+    {{- if .Values.turnserver.credentials.staticAuthSecret }}
+    static-auth-secret={{ .Values.turnserver.credentials.staticAuthSecret }}
+    {{- end }}
   # Directory mounted for runtime state and SQLite databases.
   dataDir: /var/lib/coturn
   persistence:
