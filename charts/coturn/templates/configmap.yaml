@@ -1,0 +1,11 @@
+{{- if and (not .Values.turnserver.existingConfigMap) .Values.turnserver.config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "coturn.fullname" . }}-config
+  labels:
+    {{- include "coturn.labels" . | nindent 4 }}
+data:
+  turnserver.conf: |
+{{- include "coturn.turnserverConfig" . | nindent 4 }}
+{{- end }}

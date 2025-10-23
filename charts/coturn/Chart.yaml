@@ -1,0 +1,15 @@
+apiVersion: v2
+name: coturn
+description: Helm chart for deploying the Coturn TURN/STUN server
+type: application
+version: 0.1.0
+appVersion: "4.7.0"
+keywords:
+  - coturn
+  - turn
+  - stun
+  - webrtc
+home: https://github.com/coturn/coturn
+maintainers:
+  - name: Coturn Community
+    url: https://github.com/coturn/coturn

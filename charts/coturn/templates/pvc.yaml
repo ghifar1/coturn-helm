@@ -1,0 +1,19 @@
+{{- if and .Values.turnserver.persistence.enabled (not .Values.turnserver.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "coturn.fullname" . }}-data
+  labels:
+    {{- include "coturn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- range .Values.turnserver.persistence.accessModes }}
+    - {{ . }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.turnserver.persistence.size }}
+  {{- if .Values.turnserver.persistence.storageClass }}
+  storageClassName: {{ .Values.turnserver.persistence.storageClass }}
+  {{- end }}
+{{- end }}

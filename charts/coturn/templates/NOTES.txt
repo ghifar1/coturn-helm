@@ -1,0 +1,14 @@
+Thanks for installing Coturn.
+
+{{- if .Values.hostNetwork }}
+This release runs with host networking enabled. Exposed ports
+3478/udp, 3478/tcp, 5349/udp, and 5349/tcp are available directly on each node
+hosting a pod.
+{{- else if .Values.service.enabled }}
+The TURN service is available via Service {{ include "coturn.fullname" . }}.
+{{- else }}
+No Service has been created. Enable `service.enabled` in values to expose TURN ports.
+{{- end }}
+
+Update `turnserver.config` to match your realm, authentication secrets, and
+network settings before using this deployment in production.

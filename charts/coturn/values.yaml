@@ -1,0 +1,187 @@
+# Default values for coturn. Each field can be overridden at install time via `--set` or a custom values file.
+
+# Coturn runs fine with 1 replica because sessions are pinned to sockets; scale with shared secrets and external load balancers.
+replicaCount: 1
+
+# Container image settings.
+image:
+  repository: coturn/coturn
+  pullPolicy: IfNotPresent
+  tag: 4.7.0
+
+# Populate when pulling from private registries.
+imagePullSecrets: []
+
+# Override generated resource names when integrating with larger suites.
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account used by the pod. Disable creation if you supply an existing account with restricted permissions.
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Optional pod metadata.
+podAnnotations: {}
+podLabels: {}
+
+# Security context applied at the pod/container level.
+podSecurityContext: {}
+securityContext: {}
+
+# Resource requests/limits. Leaving empty relies on scheduler defaults, which is fine for small deployments.
+resources: {}
+
+# Standard pod scheduling knobs.
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Attach a priority class if you need TURN to preempt other workloads.
+priorityClassName: ""
+
+# Host networking dramatically reduces latency and avoids exposing thousands of NodePorts; disable if you prefer a Service-only model.
+hostNetwork: true
+# Override DNS policy when host networking is disabled. When `hostNetwork: true`, `ClusterFirstWithHostNet` is set automatically.
+dnsPolicy: ""
+
+tls:
+  # Enable to mount a cert-manager TLS secret and automatically add --cert/--pkey CLI flags.
+  enabled: false
+  secretName: ""
+  mountPath: /coturn/tls
+  certFile: /coturn/tls/tls.crt
+  keyFile: /coturn/tls/tls.key
+  caCertFile: ""
+
+turnserver:
+  # Entrypoint arguments. Combine with `turnserver.extraArgs` when configuring auth secrets.
+  args:
+    - -c
+    - /etc/coturn/turnserver.conf
+  # Additional CLI flags such as `--use-auth-secret`.
+  extraArgs: []
+  # Static environment variables. See the example block at the bottom for secret wiring.
+  extraEnv: []
+  # Use `extraEnvFrom` to import ConfigMaps or Secrets.
+  extraEnvFrom: []
+  # Provide your own ConfigMap name to reuse an existing `turnserver.conf`.
+  existingConfigMap: ""
+  # Inline Coturn configuration. Template expressions are supported (e.g. `{{ .Values.turnserver.realm }}`) if desired.
+  config: |
+    # Default Coturn configuration. Update the realm and authentication settings before production use.
+    listening-port=3478
+    tls-listening-port=5349
+    fingerprint
+    no-cli
+    no-multicast-peers
+    min-port=49160
+    max-port=49200
+    realm=example.com
+  # Directory mounted for runtime state and SQLite databases.
+  dataDir: /var/lib/coturn
+  persistence:
+    # Enable to retain SQLite databases or long-term credentials between pod restarts.
+    enabled: false
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClass: ""
+    existingClaim: ""
+
+# Network exposure. With `hostNetwork: true` this Service is typically disabled to avoid double-binding ports.
+service:
+  enabled: false
+  type: ClusterIP
+  annotations: {}
+  labels: {}
+  loadBalancerIP: ""
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: turn-udp
+      port: 3478
+      protocol: UDP
+      targetPort: 3478
+    - name: turn-tcp
+      port: 3478
+      protocol: TCP
+      targetPort: 3478
+    - name: turn-tls-udp
+      port: 5349
+      protocol: UDP
+      targetPort: 5349
+    - name: turn-tls-tcp
+      port: 5349
+      protocol: TCP
+      targetPort: 5349
+
+# Optional Prometheus ServiceMonitor definition.
+serviceMonitor:
+  enabled: false
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+
+# TCP readiness checks: disable unless you expose a health endpoint or need kube probes for orchestration.
+livenessProbe:
+  enabled: false
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: false
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Additional volumes/mounts merged into the pod spec.
+volumeMounts: []
+volumes: []
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  defaultServicePort: turn-tcp
+  hosts:
+    - host: example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          servicePort: turn-tcp
+  tls: []
+
+# Example: REST API secret with host networking and PVC
+#
+# turnserver:
+#   config: |
+#     listening-port=3478
+#     fingerprint
+#     use-auth-secret
+#     static-auth-secret=$(STATIC_AUTH_SECRET)
+#     realm=webrtc.example.com
+#   extraArgs:
+#     - --no-cli
+#     - --log-file=stdout
+#   extraEnv:
+#     - name: STATIC_AUTH_SECRET
+#       valueFrom:
+#         secretKeyRef:
+#           name: coturn-rest-secret
+#           key: sharedSecret
+#   persistence:
+#     enabled: true
+#     size: 5Gi
+# service:
+#   enabled: true
+#   type: LoadBalancer
+# tls:
+#   enabled: true
+#   secretName: turn-server-ghifari-dev-tls

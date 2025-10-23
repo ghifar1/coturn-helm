@@ -1,0 +1,63 @@
+# Values tailored for turn.server.ghifari.dev with TLS and persistence.
+
+hostNetwork: false
+
+service:
+  enabled: true
+  type: LoadBalancer
+  annotations: {}
+  ports:
+    - name: turn-udp
+      port: 3478
+      protocol: UDP
+      targetPort: 3478
+    - name: turn-tcp
+      port: 3478
+      protocol: TCP
+      targetPort: 3478
+    - name: turn-tls-udp
+      port: 5349
+      protocol: UDP
+      targetPort: 5349
+    - name: turn-tls-tcp
+      port: 5349
+      protocol: TCP
+      targetPort: 5349
+
+turnserver:
+  config: |
+    listening-port=3478
+    tls-listening-port=5349
+    fingerprint
+    no-cli
+    no-multicast-peers
+    min-port=49160
+    max-port=49200
+    realm=turn.server.ghifari.dev
+  extraArgs:
+    - --log-file=stdout
+  persistence:
+    enabled: true
+    size: 1Gi
+
+tls:
+  enabled: true
+  secretName: turn-server-ghifari-dev-tls
+  certFile: /coturn/tls/tls.crt
+  keyFile: /coturn/tls/tls.key
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: turn.server.ghifari.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          servicePort: turn-tcp
+  tls:
+    - secretName: turn-server-ghifari-dev-tls
+      hosts:
+        - turn.server.ghifari.dev
